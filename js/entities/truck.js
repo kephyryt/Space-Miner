@@ -57,7 +57,9 @@ export class Truck {
 
     update(delta) {
         if (this.state === "idle") {
-            if ((this.source.storage || 0) > 0) {
+            // Check if source has cargo to pick up
+            const sourceHasItems = this.source.inventory && this.source.inventory.getTotal() > 0;
+            if (sourceHasItems) {
                 this.state = "toSource";
             }
             return;
@@ -65,10 +67,15 @@ export class Truck {
 
         if (this.state === "toSource") {
             if (this.moveTo(this.source, delta)) {
-                const pickup = Math.min(this.capacity, this.source.storage || 0);
+                // Pick up from source inventory - transfer ore resource
+                const sourceInventory = this.source.inventory;
+                const available = sourceInventory.get("ore");
+                const pickup = Math.min(this.capacity, available);
+                
                 if (pickup > 0) {
-                    this.source.storage -= pickup;
-                    this.cargo = pickup;
+                    // Remove from source inventory
+                    const removed = sourceInventory.remove("ore", pickup);
+                    this.cargo = removed;
                     
                     // Trigger load audio and particles
                     globalAudioSystem.play("truck.load");
@@ -82,15 +89,18 @@ export class Truck {
         }
         else if (this.state === "toDestination") {
             if (this.moveTo(this.destination, delta)) {
-                this.destination.storage += this.cargo;
-                this.world.resources.add("ironOre", this.cargo);
+                // Deliver to destination inventory
+                const destInventory = this.destination.inventory;
+                const delivered = destInventory.add("ore", this.cargo);
                 this.cargo = 0;
                 
                 // Trigger unload audio and particles
                 globalAudioSystem.play("truck.unload");
                 globalParticleSystem.emitBurst(this.x, this.y, 5, 60, 0.5, "dust", "#ffaa44");
                 
-                this.state = (this.source.storage || 0) > 0 ? "toSource" : "idle";
+                // Check if there's more to pick up
+                const sourceHasMore = this.source.inventory && this.source.inventory.getTotal() > 0;
+                this.state = sourceHasMore ? "toSource" : "idle";
             }
         }
     }
