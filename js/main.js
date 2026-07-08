@@ -7,10 +7,9 @@
 import { Renderer } from "./renderer.js";
 import { Camera } from "./camera.js";
 import { World } from "./world.js";
-import { UI } from "./ui.js";
+import { UILayout } from "./uiLayout.js";
 import { Construction } from "./construction.js";
 import { SaveSystem } from "./save.js";
-import { HUDManager } from "./hud.js";
 import { Tutorial } from "./tutorial.js";
 import { ObjectiveManager } from "./objectives.js";
 import { globalAnimationSystem } from "./systems/animationSystem.js";
@@ -59,25 +58,33 @@ new Renderer(
     camera
 );
 
+let world, construction, ui;
 
+try {
+    world =
+    new World();
 
-const world =
-new World();
+    construction =
+    new Construction(
+        world
+    );
 
-const hudManager = new HUDManager(world);
+    ui =
+    new UILayout(
+        world,
+        construction
+    );
 
-
-const construction =
-new Construction(
-    world
-);
-
-
-
-const ui =
-new UI(
-    construction
-);
+    // Expose to window for global access
+    window.construction = construction;
+    window.ui = ui;
+    console.log("UI initialized successfully!");
+} catch (error) {
+    console.error("Initialization error:", error);
+    console.error("Stack:", error.stack);
+    window.__initError = error;
+    throw error; // Re-throw to prevent further execution
+}
 
 const saveSystem = new SaveSystem(world);
 saveSystem.load();
@@ -166,14 +173,14 @@ canvas.addEventListener(
 
         if(object){
 
-            ui.showBuilding(
+            ui.showBuildingInspector(
                 object
             );
 
         }
         else{
 
-            ui.hide();
+            ui.clearSelection();
 
         }
 
@@ -227,20 +234,16 @@ document.getElementById(
         // HUD updates
         //
 
-        hudManager.updateFPS(1/delta);
-        hudManager.updateZoom(camera.zoom);
-        hudManager.update();
+        ui.updateFPS(1/delta);
+        ui.updateZoom(camera.zoom);
+        ui.update();
         objectives.update();
 
 
 
 //
-// Selected building updates
+// Auto-save periodically
 //
-
-ui.update();
-
-
 
 setInterval(() => saveSystem.save(), 5000);
 

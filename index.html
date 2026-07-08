@@ -1,6 +1,6 @@
 <!-- ===========================================
      Space Miner
-     Main HTML
+     Modern UI Layout
 =========================================== -->
 
 <!DOCTYPE html>
@@ -16,6 +16,7 @@
 
 
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ui-layout.css">
 
 </head>
 
@@ -23,66 +24,92 @@
 <body>
 
 
+<!-- Game Canvas -->
 <canvas id="gameCanvas"></canvas>
 
 
-
-<div id="hud">
-
-    <div>
-        <strong>Space Miner</strong>
+<!-- TOP RESOURCE BAR -->
+<div id="topResourceBar" class="resource-bar">
+    <div class="resource-item">
+        <span class="resource-icon">💰</span>
+        <span class="resource-label">Money</span>
+        <span class="resource-value" id="res-money">$0</span>
     </div>
-
-
-    <div>
-        Money:
-        <span id="money">$0</span>
+    <div class="resource-item">
+        <span class="resource-icon">⛏️</span>
+        <span class="resource-label">Ore</span>
+        <span class="resource-value" id="res-ore">0</span>
     </div>
-
-
-    <div>
-        Ore:
-        <span id="ore">0</span>
+    <div class="resource-item">
+        <span class="resource-icon">🔧</span>
+        <span class="resource-label">Plates</span>
+        <span class="resource-value" id="res-plates">0</span>
     </div>
-
-
-    <div>
-        FPS:
-        <span id="fps">0</span>
+    <div class="resource-item">
+        <span class="resource-icon">⚙️</span>
+        <span class="resource-label">Components</span>
+        <span class="resource-value" id="res-components">0</span>
     </div>
-
-
-    <div>
-        Zoom:
-        <span id="zoom">1x</span>
+    <div class="resource-item">
+        <span class="resource-icon">📚</span>
+        <span class="resource-label">Research</span>
+        <span class="resource-value" id="res-research">0</span>
     </div>
-
+    <div class="resource-item stats-item">
+        <span class="resource-label">FPS</span>
+        <span class="resource-value" id="res-fps">60</span>
+    </div>
+    <div class="resource-item stats-item">
+        <span class="resource-label">Zoom</span>
+        <span class="resource-value" id="res-zoom">1.00x</span>
+    </div>
 </div>
 
 
+<!-- LEFT SIDEBAR -->
+<div id="leftSidebar" class="sidebar left-sidebar">
+    <div class="sidebar-header">
+        <h2 class="sidebar-title">📋 Objectives</h2>
+        <button id="sidebarToggle" class="sidebar-toggle" title="Close sidebar">✕</button>
+    </div>
+    
+    <div id="sidebarContent" class="sidebar-content">
+        <!-- Content will be populated by JavaScript -->
+    </div>
+</div>
+
+<!-- Sidebar toggle button (when closed) -->
+<button id="sidebarOpen" class="sidebar-open-btn" title="Open sidebar">📋</button>
 
 
-<div id="buildingPanel">
-
-
-    <h2 id="buildingName">
-        No Selection
-    </h2>
-
-
-    <p id="buildingInfo">
-        Click a building
-    </p>
-
-
+<!-- RIGHT BUILDING INSPECTOR -->
+<div id="rightInspector" class="inspector right-inspector">
+    <div class="inspector-header">
+        <h2 id="inspectorTitle" class="inspector-title">No Selection</h2>
+        <button id="inspectorClose" class="inspector-close" title="Close">✕</button>
+    </div>
+    
+    <div id="inspectorContent" class="inspector-content">
+        <!-- Content will be populated by JavaScript -->
+    </div>
 </div>
 
 
+<!-- BOTTOM BUILD TOOLBAR -->
+<div id="bottomToolbar" class="toolbar bottom-toolbar">
+    <div class="toolbar-content">
+        <!-- Building buttons will be populated by JavaScript -->
+    </div>
+</div>
 
 
-<div id="loading">
+<!-- LOADING SCREEN -->
+<div id="loading" class="loading-screen">
 
-    Loading Space Miner...
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p>Loading Space Miner...</p>
+    </div>
 
 </div>
 
