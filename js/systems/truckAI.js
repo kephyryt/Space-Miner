@@ -23,6 +23,10 @@ export class TruckAI {
      * @returns {Building|null}
      */
     findNearestSourceBuilding(x, y, resourceType, exclude = null) {
+        if (!this.world || !this.world.objects || !Array.isArray(this.world.objects)) {
+            return null;
+        }
+
         let nearest = null;
         let nearestDistance = Infinity;
 
@@ -68,6 +72,10 @@ export class TruckAI {
      * @returns {Building|null}
      */
     findNearestDestinationBuilding(x, y, resourceType, exclude = null) {
+        if (!this.world || !this.world.objects || !Array.isArray(this.world.objects)) {
+            return null;
+        }
+
         let nearest = null;
         let nearestDistance = Infinity;
 
@@ -117,6 +125,10 @@ export class TruckAI {
      * @returns {string|null}
      */
     getNextResourceToPrioritize() {
+        if (!this.world || !this.world.objects || !Array.isArray(this.world.objects)) {
+            return null;
+        }
+
         // Priority: ore first, then plates, then components
         // This ensures basic production chain flows
         const priorities = ["ore", "plate", "component"];
