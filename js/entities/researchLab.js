@@ -4,7 +4,10 @@
 // ===========================================
 
 import { Building } from "./building.js";
+import { Inventory } from "../inventory.js";
 import { globalAnimationSystem } from "../systems/animationSystem.js";
+import { RecipeDatabase } from "../systems/recipeDatabase.js";
+import { ProductionEngine } from "../systems/productionEngine.js";
 
 export class ResearchLab extends Building {
     constructor(x, y, name = "Research Lab") {
@@ -13,6 +16,18 @@ export class ResearchLab extends Building {
         this.storage = 0;
         this.production = 1;
         this.description = "Generates research points for future upgrades and expansion.";
+        
+        // Create a temporary inventory for recipe outputs (research points)
+        this.recipeOutputInventory = new Inventory(1000, []);
+        
+        // Initialize recipe-driven production engine
+        const recipe = RecipeDatabase.getRecipe("Research Lab");
+        if (recipe) {
+            // Pass output inventory so recipe produces research points into separate inventory
+            this.productionEngine = new ProductionEngine(recipe, this, this.recipeOutputInventory);
+        } else {
+            console.error("ResearchLab: Recipe not found in RecipeDatabase");
+        }
         
         // Animation properties
         this.scanRotation = 0;
@@ -37,12 +52,17 @@ export class ResearchLab extends Building {
     }
 
     update(delta) {
-        if (!this.world) return;
-        this.storage += this.production * delta;
-        if (this.storage >= 1) {
-            const gain = Math.floor(this.storage);
-            this.storage -= gain;
-            this.world.research = (this.world.research || 0) + gain;
+        if (!this.world || !this.productionEngine) return;
+        
+        // Use recipe system for research point generation
+        this.productionEngine.update(delta);
+        
+        // Check if recipe produced research points
+        if (this.recipeOutputInventory) {
+            const researchProduced = this.recipeOutputInventory.remove("researchPoint", 100); // Remove all produced points
+            if (researchProduced > 0) {
+                this.world.research = (this.world.research || 0) + researchProduced;
+            }
         }
     }
 
