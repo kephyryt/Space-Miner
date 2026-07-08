@@ -4,6 +4,8 @@
 // ===========================================
 
 import { Building } from "./building.js";
+import { RecipeDatabase } from "../systems/recipeDatabase.js";
+import { ProductionEngine } from "../systems/productionEngine.js";
 
 export class Assembler extends Building {
     constructor(x, y, name = "Assembler") {
@@ -13,12 +15,23 @@ export class Assembler extends Building {
         this.production = 0.5;
         this.description = "Consumes plates to produce components as the factory grows.";
         
+        // Set inventory capacity for production building
+        this.inventory.capacity = 100;
+        
+        // Initialize recipe-driven production engine
+        const recipe = RecipeDatabase.getRecipe("Assembler");
+        if (recipe) {
+            this.productionEngine = new ProductionEngine(recipe, this);
+        } else {
+            console.error("Assembler: Recipe not found in RecipeDatabase");
+        }
+        
         // Animation properties
         this.gearRotation = 0;
     }
 
     update(delta) {
-        if (!this.world) return;
+        if (!this.world || !this.productionEngine) return;
         
         // Rotate gears
         this.gearRotation += delta * 4;
@@ -26,16 +39,8 @@ export class Assembler extends Building {
             this.gearRotation -= Math.PI * 2;
         }
         
-        const plates = this.world.resources.get("ironPlate");
-        if (plates >= 1 && this.storage < this.capacity) {
-            this.world.resources.add("ironPlate", -1);
-            this.storage += this.production * delta;
-            if (this.storage >= 1) {
-                const components = Math.floor(this.storage);
-                this.storage -= components;
-                this.world.resources.add("component", components);
-            }
-        }
+        // Use recipe system for production
+        this.productionEngine.update(delta);
     }
 
     drawGear(ctx, x, y, radius, teeth, rotation) {
