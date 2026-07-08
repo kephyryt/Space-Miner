@@ -4,6 +4,7 @@
 // ===========================================
 
 import { globalAnimationSystem, Easing } from "../systems/animationSystem.js";
+import { Inventory } from "../inventory.js";
 
 export class Building {
 
@@ -11,8 +12,15 @@ export class Building {
         this.x = x;
         this.y = y;
         this.name = name;
+        
+        // Inventory system (NEW: replacing legacy storage system)
+        this.inventory = new Inventory(1000, []); // 1000 capacity, accepts all resources
+        
+        // Legacy properties for backward compatibility
+        // TODO: These will be deprecated when all buildings use inventory
         this.storage = 0;
         this.capacity = 1000;
+        
         this.level = 1;
         this.production = 0;
         this.description = "A building";
@@ -52,6 +60,21 @@ export class Building {
 
     disconnectFrom(building) {
         this.connections = this.connections.filter(b => b !== building);
+    }
+
+    // Inventory compatibility - keep legacy storage in sync for backward compatibility
+    addStorage(amount) {
+        // Legacy method: adds to "ore" resource type in inventory
+        const added = this.inventory.add("ore", amount);
+        this.storage = this.inventory.getTotal();
+        return added;
+    }
+
+    removeStorage(amount) {
+        // Legacy method: removes from "ore" resource type in inventory
+        const removed = this.inventory.remove("ore", amount);
+        this.storage = this.inventory.getTotal();
+        return removed;
     }
 
     drawConnections(renderer) {
