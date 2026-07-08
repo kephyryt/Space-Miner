@@ -5,23 +5,47 @@
 
 import { globalParticleSystem } from "../systems/particleSystem.js";
 import { globalAudioSystem } from "../systems/audioSystem.js";
+import { TruckAI } from "../systems/truckAI.js";
 
 export class Truck {
 
-    constructor(x, y, source, destination, world) {
+    /**
+     * Create a truck with optional AI routing
+     * @param {number} x - Starting x position
+     * @param {number} y - Starting y position
+     * @param {World} world - Reference to game world
+     * @param {Building} source - Optional initial source building (for backward compatibility)
+     * @param {Building} destination - Optional initial destination building (for backward compatibility)
+     * @param {boolean} useAI - Whether to use intelligent AI routing (default: true)
+     */
+    constructor(x, y, world, source = null, destination = null, useAI = true) {
         this.x = x;
         this.y = y;
-        this.source = source;
-        this.destination = destination;
         this.world = world;
         this.speed = 100;
         this.capacity = 10;
         this.cargo = 0;
-        this.state = "toSource";
+        this.cargoType = "ore"; // Type of resource being carried
+        this.state = "idle"; // idle, searching, toSource, toDestination
         this.wheelRotation = 0;
         this.lastX = x;
         this.lastY = y;
         this.exhaustTimer = 0;
+        
+        // AI Routing
+        this.useAI = useAI;
+        this.ai = useAI ? new TruckAI(world) : null;
+        this.source = source; // Current source building
+        this.destination = destination; // Current destination building
+        this.searchTimer = 0;
+        this.searchInterval = 0.5; // Search for new routes every 0.5 seconds
+        
+        // For backward compatibility, if source/destination provided, start moving
+        if (source && destination) {
+            this.state = "toSource";
+        } else if (useAI) {
+            this.state = "searching";
+        }
     }
 
     moveTo(target, delta) {
@@ -56,6 +80,137 @@ export class Truck {
     }
 
     update(delta) {
+        if (!this.useAI) {
+            // Legacy update for trucks with hardcoded routes
+            this.updateLegacy(delta);
+            return;
+        }
+
+        // AI-driven truck routing
+        this.searchTimer += delta;
+
+        if (this.state === "idle") {
+            // Try to find work
+            if (this.searchTimer > this.searchInterval) {
+                this.findNewRoute();
+                this.searchTimer = 0;
+            }
+            return;
+        }
+
+        if (this.state === "searching") {
+            // Search for cargo to pick up
+            if (this.searchTimer > this.searchInterval) {
+                this.findNewRoute();
+                this.searchTimer = 0;
+            }
+            
+            // If we found a route, start moving
+            if (this.source && this.destination) {
+                this.state = "toSource";
+            }
+            return;
+        }
+
+        if (this.state === "toSource") {
+            if (this.moveTo(this.source, delta)) {
+                this.pickupFromSource();
+            }
+        }
+        else if (this.state === "toDestination") {
+            if (this.moveTo(this.destination, delta)) {
+                this.deliverToDestination();
+            }
+        }
+    }
+
+    /**
+     * Find a new source and destination pair for the truck
+     */
+    findNewRoute() {
+        // Get resource priority for this truck
+        const resourceType = this.ai.getNextResourceToPrioritize();
+        if (!resourceType) {
+            this.state = "idle";
+            return;
+        }
+
+        this.cargoType = resourceType;
+
+        // Find nearest building with this resource
+        this.source = this.ai.findNearestSourceBuilding(
+            this.x, this.y, resourceType
+        );
+
+        // Find nearest destination that accepts this resource
+        this.destination = this.source ? this.ai.findNearestDestinationBuilding(
+            this.x, this.y, resourceType, this.source
+        ) : null;
+
+        if (this.source && this.destination) {
+            this.state = "toSource";
+        } else {
+            this.state = "idle";
+        }
+    }
+
+    /**
+     * Pick up cargo from current source building
+     */
+    pickupFromSource() {
+        if (!this.source || !this.source.inventory) {
+            this.state = "searching";
+            return;
+        }
+
+        const sourceInventory = this.source.inventory;
+        const available = sourceInventory.get(this.cargoType);
+        const pickup = Math.min(this.capacity, available);
+
+        if (pickup > 0) {
+            const removed = sourceInventory.remove(this.cargoType, pickup);
+            this.cargo = removed;
+
+            // Trigger load audio and particles
+            globalAudioSystem.play("truck.load");
+            globalParticleSystem.emitBurst(
+                this.x, this.y, 5, 60, 0.5, "dust", "#ffaa44"
+            );
+
+            this.state = "toDestination";
+        } else {
+            // No cargo at source, search for new route
+            this.state = "searching";
+        }
+    }
+
+    /**
+     * Deliver cargo to current destination building
+     */
+    deliverToDestination() {
+        if (!this.destination || !this.destination.inventory) {
+            this.state = "searching";
+            return;
+        }
+
+        const destInventory = this.destination.inventory;
+        const delivered = destInventory.add(this.cargoType, this.cargo);
+        this.cargo = 0;
+
+        // Trigger unload audio and particles
+        globalAudioSystem.play("truck.unload");
+        globalParticleSystem.emitBurst(
+            this.x, this.y, 5, 60, 0.5, "dust", "#ffaa44"
+        );
+
+        // Search for next load
+        this.state = "searching";
+    }
+
+    /**
+     * Legacy update for trucks with hardcoded source/destination
+     */
+    updateLegacy(delta) {
         if (this.state === "idle") {
             // Check if source has cargo to pick up
             const sourceHasItems = this.source.inventory && this.source.inventory.getTotal() > 0;
@@ -71,16 +226,16 @@ export class Truck {
                 const sourceInventory = this.source.inventory;
                 const available = sourceInventory.get("ore");
                 const pickup = Math.min(this.capacity, available);
-                
+
                 if (pickup > 0) {
                     // Remove from source inventory
                     const removed = sourceInventory.remove("ore", pickup);
                     this.cargo = removed;
-                    
+
                     // Trigger load audio and particles
                     globalAudioSystem.play("truck.load");
                     globalParticleSystem.emitBurst(this.x, this.y, 5, 60, 0.5, "dust", "#ffaa44");
-                    
+
                     this.state = "toDestination";
                 } else {
                     this.state = "idle";
@@ -93,11 +248,11 @@ export class Truck {
                 const destInventory = this.destination.inventory;
                 const delivered = destInventory.add("ore", this.cargo);
                 this.cargo = 0;
-                
+
                 // Trigger unload audio and particles
                 globalAudioSystem.play("truck.unload");
                 globalParticleSystem.emitBurst(this.x, this.y, 5, 60, 0.5, "dust", "#ffaa44");
-                
+
                 // Check if there's more to pick up
                 const sourceHasMore = this.source.inventory && this.source.inventory.getTotal() > 0;
                 this.state = sourceHasMore ? "toSource" : "idle";
