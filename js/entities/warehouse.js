@@ -43,12 +43,16 @@ export class Warehouse extends Building {
     }
 
     update(delta) {
-        if (this.storage <= 0 || delta <= 0) return;
+        // Convert ore in inventory to money
+        const oreInInventory = this.inventory.get("ore");
+        if (oreInInventory <= 0 || delta <= 0) return;
+
         const sellAmount = 1;
-        this.storage = Math.max(0, this.storage - sellAmount);
-        if (this.world) {
-            this.world.money += sellAmount * 10;
-            this.world.resources.add("ironOre", -sellAmount);
+        const sold = this.inventory.remove("ore", sellAmount);
+        
+        if (sold > 0 && this.world) {
+            this.world.money += sold * 10;
+            this.world.resources.add("ironOre", -sold);
             
             // Trigger audio event periodically
             this.salesTimer += delta;
@@ -110,8 +114,9 @@ export class Warehouse extends Building {
         ctx.arc(pos.x + size * 0.25, pos.y - size * 0.35, lightRadius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Middle status lights
-        ctx.fillStyle = this.storage > 0 ? `rgba(100, 255, 100, ${this.blinkLight * 0.8})` : "rgba(100, 100, 100, 0.3)";
+        // Middle status lights (show if warehouse has items)
+        const hasItems = this.inventory.getTotal() > 0;
+        ctx.fillStyle = hasItems ? `rgba(100, 255, 100, ${this.blinkLight * 0.8})` : "rgba(100, 100, 100, 0.3)";
         ctx.beginPath();
         ctx.arc(pos.x - size * 0.1, pos.y, lightRadius, 0, Math.PI * 2);
         ctx.fill();
@@ -126,8 +131,8 @@ export class Warehouse extends Building {
         ctx.ellipse(pos.x, pos.y - size * 0.45, size * 0.38, size * 0.1, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Level indicator
-        const level = (this.storage / this.capacity) * 100;
+        // Level indicator (show inventory fill percentage)
+        const level = this.inventory.getFillPercentage() * 100;
         ctx.fillStyle = "#88ddff";
         ctx.font = `bold ${Math.max(10, 11 * scale)}px monospace`;
         ctx.textAlign = "center";
