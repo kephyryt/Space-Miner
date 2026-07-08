@@ -4,9 +4,12 @@
 // ===========================================
 
 import { Building } from "./building.js";
+import { Inventory } from "../inventory.js";
 import { globalAnimationSystem } from "../systems/animationSystem.js";
 import { globalAudioSystem } from "../systems/audioSystem.js";
 import { globalParticleSystem } from "../systems/particleSystem.js";
+import { RecipeDatabase } from "../systems/recipeDatabase.js";
+import { ProductionEngine } from "../systems/productionEngine.js";
 
 export class Warehouse extends Building {
     constructor(x, y, name = "Warehouse") {
@@ -16,6 +19,21 @@ export class Warehouse extends Building {
         this.acceptsResource = true;
         this.production = 0;
         this.description = "Stores mined ore and converts it into money.";
+        
+        // Set inventory capacity
+        this.inventory.capacity = 500;
+        
+        // Create a temporary inventory for recipe outputs (money)
+        this.recipeOutputInventory = new Inventory(1000, []);
+        
+        // Initialize recipe-driven production engine
+        const recipe = RecipeDatabase.getRecipe("Warehouse");
+        if (recipe) {
+            // Pass output inventory so recipe produces money into separate inventory
+            this.productionEngine = new ProductionEngine(recipe, this, this.recipeOutputInventory);
+        } else {
+            console.error("Warehouse: Recipe not found in RecipeDatabase");
+        }
         
         // Animation properties
         this.doorOpen = 0; // 0 to 1
@@ -43,30 +61,30 @@ export class Warehouse extends Building {
     }
 
     update(delta) {
-        // Convert ore in inventory to money
-        const oreInInventory = this.inventory.get("ore");
-        if (oreInInventory <= 0 || delta <= 0) return;
-
-        const sellAmount = 1;
-        const sold = this.inventory.remove("ore", sellAmount);
-        
-        if (sold > 0 && this.world) {
-            this.world.money += sold * 10;
-            this.world.resources.add("ironOre", -sold);
+        // Use recipe system for production
+        if (this.world && this.productionEngine) {
+            // Temporarily override the building's inventory for the recipe to use
+            const originalInventory = this.inventory;
             
-            // Trigger audio event periodically
-            this.salesTimer += delta;
-            if (this.salesTimer > 1) {
-                globalAudioSystem.play("resource.sell");
-                
-                // Emit resource particles upward (like money/value floating out)
-                globalParticleSystem.emitBurst(
-                    this.x,
-                    this.y - 20,
-                    3, 50, 0.5, "spark", "#ffdd44"
-                );
-                
-                this.salesTimer = 0;
+            // Production engine will use main inventory to consume inputs (ore)
+            const recipeCompleted = this.productionEngine.update(delta);
+            
+            // Check if recipe produced money
+            if (this.recipeOutputInventory) {
+                const moneyProduced = this.recipeOutputInventory.remove("money", 100); // Remove all produced money
+                if (moneyProduced > 0) {
+                    this.world.money += moneyProduced;
+                    
+                    // Trigger audio event
+                    globalAudioSystem.play("resource.sell");
+                    
+                    // Emit resource particles upward (like money/value floating out)
+                    globalParticleSystem.emitBurst(
+                        this.x,
+                        this.y - 20,
+                        3, 50, 0.5, "spark", "#ffdd44"
+                    );
+                }
             }
         }
     }

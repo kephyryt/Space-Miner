@@ -55,6 +55,17 @@ RecipeDatabase.ALL_RECIPES = {
         duration: 2.0 // 2 seconds per cycle (slower, requires 2 plates)
     }),
 
+    "Warehouse": new Recipe({
+        name: "Ore Conversion to Money",
+        inputs: [
+            { resourceType: "ore", amount: 1 }
+        ],
+        outputs: [
+            { resourceType: "money", amount: 10 } // 10 money per ore
+        ],
+        duration: 1.0 // 1 second per cycle
+    }),
+
     "Research Lab": new Recipe({
         name: "Research Point Generation",
         inputs: [], // No inputs, research labs generate knowledge

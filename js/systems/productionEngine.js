@@ -16,10 +16,12 @@ export class ProductionEngine {
      * Create production engine for a building
      * @param {Recipe} recipe - Production recipe
      * @param {Building} building - Building that uses this recipe
+     * @param {Inventory} outputInventory - Optional: inventory to produce outputs into (defaults to building.inventory)
      */
-    constructor(recipe, building) {
+    constructor(recipe, building, outputInventory = null) {
         this.recipe = recipe;
         this.building = building;
+        this.outputInventory = outputInventory; // Optional override for output location
         
         // Progress from 0 to 1 (represents completion of current cycle)
         this.progress = 0;
@@ -62,8 +64,11 @@ export class ProductionEngine {
             const completed = this.progress >= 1.0;
 
             if (completed) {
+                // Use output inventory if provided, otherwise use building's inventory
+                const targetInventory = this.outputInventory || this.building.inventory;
+                
                 // Try to produce outputs
-                if (this.recipe.produceOutputs(this.building.inventory)) {
+                if (this.recipe.produceOutputs(targetInventory)) {
                     // Successfully produced - reset for next cycle
                     this.progress = 0;
                     this.inputsConsumed = false;
@@ -107,8 +112,8 @@ export class ProductionEngine {
     /**
      * Deserialize from saved state
      */
-    static deserialize(data, recipe, building) {
-        const engine = new ProductionEngine(recipe, building);
+    static deserialize(data, recipe, building, outputInventory = null) {
+        const engine = new ProductionEngine(recipe, building, outputInventory);
         engine.progress = data.progress || 0;
         engine.inputsConsumed = data.inputsConsumed || false;
         return engine;
