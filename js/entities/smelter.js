@@ -6,6 +6,8 @@
 import { Building } from "./building.js";
 import { globalAnimationSystem } from "../systems/animationSystem.js";
 import { globalParticleSystem } from "../systems/particleSystem.js";
+import { RecipeDatabase } from "../systems/recipeDatabase.js";
+import { ProductionEngine } from "../systems/productionEngine.js";
 
 export class Smelter extends Building {
     constructor(x, y, name = "Smelter") {
@@ -15,6 +17,17 @@ export class Smelter extends Building {
         this.outputStorage = 0;
         this.production = 1;
         this.description = "Turns mined ore into iron plates for later processing.";
+        
+        // Set inventory capacity for production building
+        this.inventory.capacity = 100;
+        
+        // Initialize recipe-driven production engine
+        const recipe = RecipeDatabase.getRecipe("Smelter");
+        if (recipe) {
+            this.productionEngine = new ProductionEngine(recipe, this);
+        } else {
+            console.error("Smelter: Recipe not found in RecipeDatabase");
+        }
         
         // Animation properties
         this.furnaceGlow = 0.3;
@@ -33,19 +46,12 @@ export class Smelter extends Building {
     }
 
     update(delta) {
-        if (!this.world) return;
-        const oreAvailable = this.world.resources.get("ironOre");
-        if (oreAvailable >= 1 && this.outputStorage < this.capacity) {
-            this.world.resources.add("ironOre", -1);
-            this.outputStorage += this.production * delta;
-            if (this.outputStorage >= 1) {
-                const plates = Math.floor(this.outputStorage);
-                this.outputStorage -= plates;
-                this.world.resources.add("ironPlate", plates);
-            }
-        }
+        if (!this.world || !this.productionEngine) return;
         
-        // Emit smoke particles
+        // Use recipe system for production
+        const recipeCompleted = this.productionEngine.update(delta);
+        
+        // Emit smoke particles when producing
         this.smokeTimer += delta;
         if (this.smokeTimer > 0.2) {
             globalParticleSystem.emitBurst(
