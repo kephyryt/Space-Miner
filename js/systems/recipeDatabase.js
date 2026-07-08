@@ -33,6 +33,15 @@ export class RecipeDatabase {
  * Format: buildingType → Recipe
  */
 RecipeDatabase.ALL_RECIPES = {
+    "Mine": new Recipe({
+        name: "Ore Extraction",
+        inputs: [], // No inputs, mines extract from ground
+        outputs: [
+            { resourceType: "ore", amount: 1 }
+        ],
+        duration: 0.2 // 5 ore per second (0.2 seconds per ore)
+    }),
+
     "Smelter": new Recipe({
         name: "Iron Smelting",
         inputs: [

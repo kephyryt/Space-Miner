@@ -4,6 +4,8 @@
 // ===========================================
 
 import { Building } from "./building.js";
+import { RecipeDatabase } from "../systems/recipeDatabase.js";
+import { ProductionEngine } from "../systems/productionEngine.js";
 
 
 export class ResourceBuilding extends Building {
@@ -23,16 +25,23 @@ export class ResourceBuilding extends Building {
         this.capacity = 100;
 
         this.production = 5;
+        
+        // Initialize recipe-driven production engine
+        const recipe = RecipeDatabase.getRecipe("Mine");
+        if (recipe) {
+            this.productionEngine = new ProductionEngine(recipe, this);
+        } else {
+            console.error("ResourceBuilding (Mine): Recipe not found in RecipeDatabase");
+        }
     }
 
 
 
     update(delta) {
-        // Produce ore and add to inventory
-        const produced = this.production * delta;
+        if (!this.productionEngine) return;
         
-        // Add to inventory (ore resource type)
-        const added = this.inventory.add("ore", produced);
+        // Use recipe system for ore production
+        this.productionEngine.update(delta);
         
         // Update legacy storage property for backward compatibility
         this.storage = this.inventory.getTotal();
