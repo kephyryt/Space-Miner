@@ -45,8 +45,17 @@ export class World {
         this.warehouses.push(warehouse);
         this.objects.push(warehouse);
 
-        this.truck = new Truck(0, 0, startingMine, warehouse, this);
-        this.trucks.push(this.truck);
+        // Create multiple AI-driven trucks that autonomously route themselves
+        // Truck 1: AI routing, starts from mine area
+        const truck1 = new Truck(500, 100, this, null, null, true);
+        this.trucks.push(truck1);
+
+        // Truck 2: AI routing, starts from warehouse area (for different chain)
+        const truck2 = new Truck(300, 100, this, null, null, true);
+        this.trucks.push(truck2);
+
+        // Keep reference to first truck for legacy compatibility if needed
+        this.truck = truck1;
 
         const smelter = new Smelter(200, 250, "Smelter");
         smelter.world = this;
