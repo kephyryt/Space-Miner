@@ -9,37 +9,18 @@ import { Camera } from "./camera.js";
 import { World } from "./world.js";
 import { UI } from "./ui.js";
 import { Construction } from "./construction.js";
+import { SaveSystem } from "./save.js";
+import { HUDManager } from "./hud.js";
+import { Tutorial } from "./tutorial.js";
+import { ObjectiveManager } from "./objectives.js";
+import { globalAnimationSystem } from "./systems/animationSystem.js";
+import { globalParticleSystem } from "./systems/particleSystem.js";
 
 
 
 const canvas =
 document.getElementById(
     "gameCanvas"
-);
-
-
-
-const fpsText =
-document.getElementById(
-    "fps"
-);
-
-
-const zoomText =
-document.getElementById(
-    "zoom"
-);
-
-
-const moneyText =
-document.getElementById(
-    "money"
-);
-
-
-const oreText =
-document.getElementById(
-    "ore"
 );
 
 
@@ -83,6 +64,7 @@ new Renderer(
 const world =
 new World();
 
+const hudManager = new HUDManager(world);
 
 
 const construction =
@@ -96,6 +78,15 @@ const ui =
 new UI(
     construction
 );
+
+const saveSystem = new SaveSystem(world);
+saveSystem.load();
+
+const tutorial = new Tutorial();
+const objectives = new ObjectiveManager(world);
+
+// Show tutorial on first load
+setTimeout(() => tutorial.show(), 500);
 
 
 
@@ -216,6 +207,8 @@ document.getElementById(
         last=time;
 
 
+        globalAnimationSystem.update(delta);
+        camera.update(delta);
 
         world.update(delta);
 
@@ -226,35 +219,18 @@ document.getElementById(
 
         world.draw(renderer);
 
+        globalParticleSystem.draw(renderer);
+
 
 
         //
         // HUD updates
         //
 
-        fpsText.textContent =
-        Math.round(
-            1/delta
-        );
-
-
-        zoomText.textContent =
-        camera.zoom.toFixed(2)
-        +"x";
-
-
-moneyText.textContent =
-"$"
-+
-Math.floor(
-    world.money
-);
-
-
-oreText.textContent =
-Math.floor(
-    world.ore
-);
+        hudManager.updateFPS(1/delta);
+        hudManager.updateZoom(camera.zoom);
+        hudManager.update();
+        objectives.update();
 
 
 
@@ -265,6 +241,8 @@ Math.floor(
 ui.update();
 
 
+
+setInterval(() => saveSystem.save(), 5000);
 
 requestAnimationFrame(
     loop
